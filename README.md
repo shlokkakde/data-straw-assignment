@@ -1,19 +1,59 @@
 # AI-Powered News Intelligence Platform
 
-This is a Vercel-ready implementation of the Datastraw AI + Tech Intern assignment. It includes a Next.js dashboard, serverless API routes, a NewsData.io ingestion pipeline, hosted Postgres storage, and AI-generated article summaries, sentiment, and insights.
+A Vercel-ready news intelligence dashboard built for the Datastraw AI + Tech Intern assignment. The app fetches live articles from NewsData.io, cleans and deduplicates them, stores them in hosted Postgres, enriches them with AI-generated summaries, sentiment, and insights, then presents everything in a responsive dashboard.
 
-## Stack
+Live deployment: https://data-straw-assignment.vercel.app
 
-- **App:** Next.js App Router
-- **Hosting:** Vercel
-- **Database:** Hosted Postgres, recommended through Neon on Vercel Marketplace
-- **Driver:** `@neondatabase/serverless`
-- **News API:** NewsData.io latest endpoint with pagination, retries, validation, and deduplication
-- **AI:** Local NLP enrichment by default, optional OpenAI-compatible enrichment through env vars
+## Features
+
+- Live NewsData.io ingestion with pagination, retries, validation, and deduplication.
+- Hosted Postgres persistence through Neon and `@neondatabase/serverless`.
+- Automatic schema creation for articles, AI insights, and ingestion run logs.
+- AI enrichment for every article:
+  - 1-2 sentence summary
+  - Positive, neutral, or negative sentiment
+  - 3-5 actionable insights
+- Responsive dashboard with real database-backed content.
+- Search across titles, sources, summaries, article text, and insights.
+- Filters for sentiment, source, and category.
+- Automatic background sync when the database is empty or stale.
+- Production scheduled sync through Vercel Cron.
+
+## Tech Stack
+
+- **Frontend:** Next.js App Router, React, CSS
+- **Backend:** Next.js Route Handlers running as Vercel Functions
+- **Database:** Neon Postgres
+- **Database Driver:** `@neondatabase/serverless`
+- **News Source:** NewsData.io latest endpoint
+- **AI Layer:** Local NLP enrichment by default, optional OpenAI-compatible enrichment
+- **Deployment:** Vercel
+
+## Architecture
+
+```text
+NewsData.io
+   -> ingestion pipeline
+   -> clean, validate, deduplicate
+   -> AI enrichment
+   -> Neon Postgres
+   -> Next.js API routes
+   -> dashboard UI
+```
+
+Important files:
+
+- `src/pipeline.js` - fetches, cleans, stores, and analyzes news articles.
+- `src/newsdata.js` - NewsData.io API client with pagination and retry handling.
+- `src/ai.js` - local NLP analysis and optional OpenAI-compatible analysis.
+- `src/lib/postgres.js` - Neon Postgres schema and query layer.
+- `src/app/api/*` - serverless API routes.
+- `public/app.js` - dashboard interactivity, search, filters, and automatic sync.
+- `vercel.json` - production cron schedule.
 
 ## Environment Variables
 
-Create `.env` locally and add the same values in Vercel Project Settings.
+Copy `.env.example` to `.env` for local development, then add the same production values in Vercel Project Settings.
 
 ```env
 DATABASE_URL=
@@ -34,70 +74,96 @@ INGEST_SECRET=
 CRON_SECRET=
 ```
 
-`DATABASE_URL` should be a Neon Postgres connection string. The easiest path is Vercel Dashboard -> Marketplace -> Neon -> Add to project.
+Required for production:
 
-## Local Setup
+- `DATABASE_URL`
+- `NEWSDATA_API_KEY`
+- `CRON_SECRET`
+
+`DATABASE_URL` is provided automatically when Neon is added through Vercel Marketplace. `CRON_SECRET` can be any long random string.
+
+## Local Development
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Start the app:
+
+```bash
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open:
 
-To fetch and analyze articles:
+```text
+http://localhost:3000
+```
+
+Run ingestion manually:
 
 ```bash
 npm run ingest
 ```
 
-The schema is created automatically on first API or ingestion run.
+Run checks:
 
-The dashboard runs a background sync when the database is empty or stale. Production deployments also include a Vercel Cron job that calls `/api/cron/ingest` daily at 06:00 UTC. Set `CRON_SECRET` in Vercel so the cron endpoint can verify scheduled requests.
+```bash
+npm test
+npm run build
+```
 
-## Vercel Deployment
+## Deployment
 
-1. Push this repo to GitHub.
-2. Import the repo in Vercel.
-3. Add Neon Postgres from Vercel Marketplace, or manually set a Neon `DATABASE_URL`.
+1. Push the repository to GitHub.
+2. Import it in Vercel.
+3. Add Neon Postgres from Vercel Marketplace.
 
    ```bash
    vercel integration add neon
    ```
 
-   You can also use Vercel Dashboard -> Storage/Marketplace -> Neon.
-4. Add `NEWSDATA_API_KEY` and any optional AI variables in Vercel Project Settings.
-5. Add `CRON_SECRET` in Vercel Project Settings. Use any long random value.
+4. Add `NEWSDATA_API_KEY` in Vercel Project Settings.
+5. Add `CRON_SECRET` in Vercel Project Settings.
 6. Deploy.
-7. Open the deployed app. It will sync automatically when the database is empty or stale, and the production cron job will keep it refreshed. You can also run ingestion locally against the hosted DB:
-
-   ```bash
-   npm run ingest
-   ```
 
 CLI deployment:
 
 ```bash
-npm i -g vercel
 vercel login
 vercel
 vercel --prod
 ```
 
+The app also includes `vercel.json`, which schedules automatic production ingestion once per day at `06:00 UTC`.
+
 ## API Routes
 
-- `GET /api/health`
-- `GET /api/stats`
-- `GET /api/articles?search=ai&sentiment=positive&source=Example&category=technology`
-- `GET /api/articles/:id`
-- `POST /api/ingest`
+- `GET /api/health` - health check
+- `GET /api/stats` - dashboard metrics, sources, categories, and latest ingestion run
+- `GET /api/articles` - article list with optional `search`, `sentiment`, `source`, and `category` filters
+- `GET /api/articles/:id` - single article detail
+- `POST /api/ingest` - manual ingestion endpoint
+- `GET /api/cron/ingest` - protected Vercel Cron ingestion endpoint
 
-Set `INGEST_SECRET` to require an `x-ingest-secret` header for API-triggered ingestion.
+If `INGEST_SECRET` is set, `POST /api/ingest` requires an `x-ingest-secret` header. The cron endpoint requires:
 
-## Database Design
+```text
+Authorization: Bearer <CRON_SECRET>
+```
 
-`articles` stores cleaned NewsData.io records with source metadata, categories, keywords, raw JSON, and a fingerprint for deduplication.
+## Database Schema
 
-`article_insights` stores AI-generated summaries, sentiment labels, sentiment scores, insights, and the model used.
+- `articles` stores cleaned NewsData.io records, source metadata, categories, keywords, raw JSON, and deduplication fingerprints.
+- `article_insights` stores AI summaries, sentiment labels, sentiment scores, insights, and model metadata.
+- `ingestion_runs` stores pipeline status, counts, errors, and timestamps.
 
-`ingestion_runs` records each pipeline execution with counts and errors for observability.
+The tables are created automatically on first API or ingestion run.
+
+## Notes
+
+- The dashboard displays real data from Postgres, not mock content.
+- The visible manual sync button was intentionally removed because the assignment requires a data pipeline, not an in-app sync control.
+- Local AI enrichment keeps the app usable without paid AI calls. Set `AI_PROVIDER=openai` and provide `OPENAI_API_KEY` to use an OpenAI-compatible model.
