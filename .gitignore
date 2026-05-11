@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env*.local
+.next/
+.vercel/
+.DS_Store
+data/*.db
+data/*.db-shm
+data/*.db-wal
+coverage/
+npm-debug.log*
+
+.vercel

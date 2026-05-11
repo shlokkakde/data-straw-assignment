@@ -1,0 +1,33 @@
+{
+  "name": "news-intelligence-platform",
+  "version": "1.0.0",
+  "description": "AI-powered news intelligence dashboard for the Datastraw AI + Tech Intern assignment.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "ingest": "node src/pipeline.js",
+    "test": "node tests/smoke.test.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "next": "^16.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "keywords": [
+    "news",
+    "ai",
+    "nextjs",
+    "postgres",
+    "vercel",
+    "dashboard",
+    "newsdata"
+  ],
+  "license": "MIT"
+}

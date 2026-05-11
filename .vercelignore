@@ -1,0 +1,7 @@
+.env
+.env.local
+.env*.local
+data/
+server.out.log
+server.err.log
+coverage/
